@@ -2,15 +2,54 @@ const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/user/User');
 const db = require('../src/config/database');
+// const nodemailerStub = require('nodemailer-stub');
+// const EmailService = require('../src/email/EmailService');
+const SMTPServer = require('smtp-server').SMTPServer;
 
-beforeAll(() => {
-  return db.sync();
+let lastMail, server;
+let simulateSmtpFailure = false;
+beforeAll(async () => {
+  lastMail = '';
+  server = new SMTPServer({
+    authOptional: true,
+    onData(stream, session, callback) {
+      let mailBody = '';
+
+      // stream.pipe(process.stdout);
+      stream.on('data', (data) => {
+        console.log('Stream\n', data.toString());
+        mailBody += data.toString();
+      });
+      stream.on('end', () => {
+        if (simulateSmtpFailure) {
+          const err = new Error('Invalid mailboxx');
+          err.responseCode = 553;
+          return callback(err);
+        }
+        console.log('TOF', typeof mailBody);
+        lastMail = mailBody;
+        callback();
+      });
+    },
+  });
+  await server.listen(8587, 'localhost');
+  await db.sync();
 });
 
 beforeEach(() => {
+  simulateSmtpFailure = false;
   return User.destroy({ truncate: true });
 });
 
+afterEach(() => {
+  // restore the spy created with spyOn
+
+  jest.restoreAllMocks();
+});
+
+afterAll(async () => {
+  await server.close();
+});
 const validUser = {
   username: 'user1',
   email: 'user1@mail.com',
@@ -198,6 +237,101 @@ describe('User Registration', () => {
     const body = response.body;
     expect(Object.keys(body.validationErrors)).toEqual(['username', 'email']);
   });
+
+  it('create user in inactive mode even the request body contains inactive as false', async () => {
+    // Arrange
+    const newUser = { ...validUser, inactive: false };
+    await postUser({ ...newUser });
+    const users = await User.findAll();
+    const savedUser = users[0];
+    expect(savedUser.inactive).toBe(true);
+  });
+
+  it('creates user in inactive mode even the request body contains inactive as false', async () => {
+    await postUser({ ...validUser, inactive: false });
+    const users = await User.findAll();
+    const savedUser = users[0];
+    expect(savedUser.inactive).toBe(true);
+  });
+
+  it('creates an activationToken for user', async () => {
+    await postUser({ ...validUser, inactive: false });
+    const users = await User.findAll();
+    const savedUser = users[0];
+    // expect(savedUser.activationToken).not.toBeUndefined();
+    expect(savedUser.activationToken).toBeTruthy();
+  });
+
+  it('sends an Account activation email with activationToken', async () => {
+    await postUser({ ...validUser });
+    // const lastMail = nodemailerStub.interactsWithMail.lastMail();
+    // console.log(lastMail);
+
+    // expect(lastMail.to[0]).toBe('user1@mail.com');
+    // console.log(lastMail);
+    // console.log(typeof lastMail);
+    expect(lastMail).toContain('user1@mail.com');
+
+    const users = await User.findAll();
+    const savedUser = users[0];
+    // expect(savedUser.activationToken).not.toBeUndefined();
+    expect(lastMail).toContain(savedUser.activationToken);
+  });
+
+  it('returns 502 Bad Gateway when sending email fails', async () => {
+    // const
+    // set Expectation
+    // const mockSendAccountActivation = jest
+    //   .spyOn(EmailService, 'sendAccountActivation')
+    //   .mockImplementation(() => Promise.reject({ message: 'Failed to deliver email' }));
+    // .mockRejectedValue({ message: 'Failed to deliver email' });
+    simulateSmtpFailure = true;
+    // Act
+    const response = await postUser({ ...validUser });
+
+    // Assert
+    expect(response.status).toBe(502);
+
+    // Tear Down
+    // mockSendAccountActivation.mockRestore();
+  });
+
+  it('returns Email failure message when sending email fails', async () => {
+    simulateSmtpFailure = true;
+    // set Expectation
+    // const mockSendAccountActivation = jest
+    //   .spyOn(EmailService, 'sendAccountActivation')
+    //   .mockImplementation(() => Promise.reject({ message: 'Failed to deliver email' }));
+    // .mockRejectedValue({ message: 'Failed to deliver email' });
+
+    // Act
+    const response = await postUser({ ...validUser });
+
+    // Assert
+    expect(response.body.message).toBe('E-mail Failure');
+
+    // Tear Down
+    // mockSendAccountActivation.mockRestore();
+  });
+
+  it('does not save user to database if activation email fails', async () => {
+    simulateSmtpFailure = true;
+    // // set Expectation
+    // const mockSendAccountActivation = jest
+    //   .spyOn(EmailService, 'sendAccountActivation')
+    //   .mockImplementation(() => Promise.reject({ message: 'Failed to deliver email' }));
+    // .mockRejectedValue({ message: 'Failed to deliver email' });
+
+    // Act
+    await postUser({ ...validUser });
+    const users = await User.findAll();
+
+    // Assert
+    expect(users.length).toBe(0);
+
+    // Tear Down
+    // mockSendAccountActivation.mockRestore();
+  });
 });
 
 describe('Internationalization', () => {
@@ -210,6 +344,7 @@ describe('Internationalization', () => {
   const password_size = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
   const password_invalid = 'รหัสผ่านต้องประกอบด้วยอักษรภาษาอังกฤษตัวเล็ก,ตัวใหญ่ และตัวเลข อย่างน้อยอย่างละ 1 ตัว';
   const user_create_success = 'สร้างบัญชีผู้ใช้งานสำเร็จ';
+  const email_failure = 'ส่งอีเมล์ยืนยันการสมัครไม่สำเร็จ';
   it.each`
     field         | value              | expectedMessage
     ${'username'} | ${null}            | ${username_null}
@@ -247,5 +382,24 @@ describe('Internationalization', () => {
   it(`returns ${user_create_success} when signup request is valid`, async () => {
     const response = await postUser(validUser, { language: 'th' });
     expect(response.body.message).toBe(user_create_success);
+  });
+
+  // Email i18
+  it(`returns ${email_failure} message when sending email fails`, async () => {
+    simulateSmtpFailure = true;
+    // set Expectation
+    // const mockSendAccountActivation = jest
+    //   .spyOn(EmailService, 'sendAccountActivation')
+    //   .mockImplementation(() => Promise.reject({ message: 'Failed to deliver email' }));
+    // .mockRejectedValue({ message: 'Failed to deliver email' });
+
+    // Act
+    const response = await postUser({ ...validUser }, { language: 'th' });
+
+    // Assert
+    expect(response.body.message).toBe(email_failure);
+
+    // Tear Down
+    // mockSendAccountActivation.mockRestore();
   });
 });

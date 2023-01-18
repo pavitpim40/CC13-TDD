@@ -68,7 +68,7 @@ router.post(
       await UserService.save(req.body);
       return res.status(200).send({ message: req.t('user_create_success') });
     } catch (error) {
-      return res.status(500);
+      return res.status(502).send({ message: req.t(error.message) });
       // return res.status(500);
     }
   }

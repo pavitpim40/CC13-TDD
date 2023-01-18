@@ -8,7 +8,7 @@ i18next
   .use(middleware.LanguageDetector)
   .init({
     fallbackLng: 'en',
-
+    lng: 'en',
     ns: ['translation'],
     defaultNS: 'translation',
     backend: {
