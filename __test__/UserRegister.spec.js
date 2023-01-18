@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/user/User');
 const db = require('../src/config/database');
-const { findAll } = require('../src/user/User');
 
 // const nodemailerStub = require('nodemailer-stub');
 // const EmailService = require('../src/email/EmailService');

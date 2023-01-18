@@ -5,7 +5,15 @@
     "database": "hoaxify_development",
     "host": "127.0.0.1",
     "dialect": "mysql",
-    "logging": false
+    "logging": false,
+    "mail": {
+      "host": "smtp.ethereal.email",
+      "port": 587,
+      "auth": {
+        "user": "laila.maggio@ethereal.email",
+        "pass": "MmwZ9nENDcSu1xxwdp"
+      }
+    }
   },
   "test": {
     "username": "",
@@ -13,7 +21,14 @@
     "database": "",
     "dialect": "sqlite",
     "storage": ":memory:",
-    "logging": false
+    "logging": false,
+    "mail": {
+      "host": "localhost",
+      "port": 8587,
+      "tls": {
+        "rejectUnauthorized": false
+      }
+    }
   },
   "production": {
     "username": "root",
