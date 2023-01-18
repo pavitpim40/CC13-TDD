@@ -2,6 +2,8 @@ const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/user/User');
 const db = require('../src/config/database');
+const { findAll } = require('../src/user/User');
+
 // const nodemailerStub = require('nodemailer-stub');
 // const EmailService = require('../src/email/EmailService');
 const SMTPServer = require('smtp-server').SMTPServer;
@@ -17,7 +19,7 @@ beforeAll(async () => {
 
       // stream.pipe(process.stdout);
       stream.on('data', (data) => {
-        console.log('Stream\n', data.toString());
+        // console.log('Stream\n', data.toString());
         mailBody += data.toString();
       });
       stream.on('end', () => {
@@ -26,7 +28,7 @@ beforeAll(async () => {
           err.responseCode = 553;
           return callback(err);
         }
-        console.log('TOF', typeof mailBody);
+        // console.log('TOF', typeof mailBody);
         lastMail = mailBody;
         callback();
       });
@@ -224,7 +226,7 @@ describe('User Registration', () => {
   it(`returns ${email_inuse} when same email is already in use`, async () => {
     await User.create(validUser);
     const response = await postUser(validUser);
-    console.log(response.body);
+    // console.log(response.body);
     expect(response.body.validationErrors.email).toBe('E-mail in use');
   });
 
@@ -375,7 +377,7 @@ describe('Internationalization', () => {
   it(`returns ${email_inuse} when same email is already in use`, async () => {
     await User.create(validUser);
     const response = await postUser(validUser, { language: 'th' });
-    console.log(response.body);
+    // console.log(response.body);
     expect(response.body.validationErrors.email).toBe(email_inuse);
   });
 
@@ -402,4 +404,92 @@ describe('Internationalization', () => {
     // Tear Down
     // mockSendAccountActivation.mockRestore();
   });
+});
+
+describe('Account activation', () => {
+  it('activates the account when correct token is sent', async () => {
+    await postUser({ ...validUser });
+    let users = await User.findAll();
+    const token = users[0].activationToken;
+
+    // ACT
+    await request(app)
+      .post('/api/1.0/users/token/' + token)
+      .send();
+
+    users = await User.findAll();
+
+    expect(users[0].inactive).toBe(false);
+  });
+
+  it('remove activationToken from user table after successful activation', async () => {
+    await postUser({ ...validUser });
+    let users = await User.findAll();
+    const token = users[0].activationToken;
+
+    // ACT
+    await request(app)
+      .post('/api/1.0/users/token/' + token)
+      .send();
+
+    // Assert
+    users = await User.findAll();
+    expect(users[0].activationToken).toBeFalsy();
+  });
+
+  it('it does not activate the account when token is wrong ', async () => {
+    await postUser({ ...validUser });
+    // let users = await User.findAll();
+    const token = 'this-token-does-not-exists';
+
+    // ACT
+    await request(app)
+      .post('/api/1.0/users/token/' + token)
+      .send();
+
+    // Assert
+    let users = await User.findAll();
+    expect(users[0].inactive).toBe(true);
+  });
+
+  it('it return bad request when token is wrong ', async () => {
+    await postUser({ ...validUser });
+    // let users = await User.findAll();
+    const token = 'this-token-does-not-exists';
+
+    // ACT
+    const response = await request(app)
+      .post('/api/1.0/users/token/' + token)
+      .send();
+
+    // Assert
+    // users = await User.findAll();
+    // expect(users[0].inactive).toBe(true);
+    expect(response.status).toBe(400);
+  });
+
+  // happy+unhappy : message
+  it.each`
+    language | tokenStatus  | message
+    ${'th'}  | ${'wrong'}   | ${'บัญชีนี้มีการเปิดใช้งานไปแล้วหรือการเปิดใช้งานไม่ถูกต้อง'}
+    ${'en'}  | ${'wrong'}   | ${'This account either active or the token is invalid'}
+    ${'th'}  | ${'correct'} | ${'ยืนยันการเปิดใช้งานบัญชีสำเร็จ'}
+    ${'en'}  | ${'correct'} | ${'Account is activated'}
+  `(
+    'returns $message when wrong token is send and language is $language',
+    async ({ language, tokenStatus, message }) => {
+      await postUser({ ...validUser });
+      let token = 'this-token-does-not-exists';
+      if (tokenStatus === 'correct') {
+        let users = await User.findAll();
+        token = users[0].activationToken;
+      }
+      const response = await request(app)
+        .post('/api/1.0/users/token/' + token)
+        .set('Accept-language', language)
+        .send();
+
+      expect(response.body.message).toBe(message);
+    }
+  );
 });

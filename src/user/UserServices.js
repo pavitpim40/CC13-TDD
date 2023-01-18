@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const User = require('./User');
 const EmailService = require('../email/EmailService');
 const EmailException = require('../email/EmailException');
+const InvalidTokenException = require('../user/InvalidTokenException');
 const sequelize = require('../config/database');
 
 const generateToken = (length) => {
@@ -16,14 +17,14 @@ const save = async (body) => {
   const user = { username, password: hashedPassword, email, activationToken: generateToken(16) };
   const transaction = await sequelize.transaction();
   await User.create(user, { transaction });
-  console.log('$$', user.activationToken);
+  // console.log('$$', user.activationToken);
 
   try {
     await EmailService.sendAccountActivation(email, user.activationToken);
-    console.log('AFTER SEND MAIL');
+    // console.log('AFTER SEND MAIL');
     await transaction.commit();
   } catch (error) {
-    console.log('error-send email', error);
+    // console.log('error-send email', error);
     await transaction.rollback();
     throw new EmailException();
   }
@@ -31,4 +32,14 @@ const save = async (body) => {
 const findByEmail = async (email) => {
   return await User.findOne({ where: { email } });
 };
-module.exports = { save, findByEmail };
+
+const activate = async (token) => {
+  const user = await User.findOne({ where: { activationToken: token } });
+  if (!user) {
+    throw new InvalidTokenException();
+  }
+  user.inactive = false;
+  user.activationToken = null;
+  await user.save();
+};
+module.exports = { save, findByEmail, activate };
