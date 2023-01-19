@@ -21,6 +21,7 @@ i18next
     },
   });
 const userRoute = require('./user/UserRoute');
+const AuthenticateRoute = require('./auth/AuthenticationRouter');
 const db = require('./config/database');
 const app = express();
 
@@ -32,7 +33,8 @@ db.authenticate()
   .then(() => console.log('DB connect'))
   .catch((err) => console.log(err));
 
-app.use('/', userRoute);
+app.use('/api/1.0/users', userRoute);
+app.use('/api/1.0/auth', AuthenticateRoute);
 
 app.use(ErrorHandler);
 

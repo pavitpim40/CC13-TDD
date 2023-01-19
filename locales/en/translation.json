@@ -11,5 +11,7 @@
   "email_failure": "E-mail Failure",
   "account_activation_failure": "This account either active or the token is invalid",
   "account_activation_success": "Account is activated",
-  "validation_failure": "Validation Failure"
+  "validation_failure": "Validation Failure",
+  "authentication_failure": "Invalid credential",
+  "inactive_authentication_failure": "Account is inactive"
 }

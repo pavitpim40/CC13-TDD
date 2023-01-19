@@ -24,7 +24,7 @@ const ValidationException = require('../error/ValidationException');
 //   next();
 // };
 router.post(
-  '/api/1.0/users',
+  '/',
   check('username')
     .notEmpty()
     .withMessage('username_null')
@@ -77,7 +77,7 @@ router.post(
   }
 );
 
-router.post('/api/1.0/users/token/:activationToken', async (req, res, next) => {
+router.post('/token/:activationToken', async (req, res, next) => {
   const { activationToken } = req.params;
   try {
     await UserService.activate(activationToken);

@@ -11,5 +11,7 @@
   "email_failure": "ส่งอีเมล์ยืนยันการสมัครไม่สำเร็จ",
   "account_activation_failure": "บัญชีนี้มีการเปิดใช้งานไปแล้วหรือการเปิดใช้งานไม่ถูกต้อง",
   "account_activation_success": "ยืนยันการเปิดใช้งานบัญชีสำเร็จ",
-  "validation_failure": "รูปแบบข้อมูลไม่ถูกต้อง"
+  "validation_failure": "รูปแบบข้อมูลไม่ถูกต้อง",
+  "authentication_failure": "ยืนยันตัวตนไม่สำเร็จ",
+  "inactive_authentication_failure": "บัญชีนี้ยังไม่ถูกเปิดใช้งาน"
 }
