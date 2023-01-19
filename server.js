@@ -1,6 +1,6 @@
 // require('dotenv').config();
-const app = require('./app');
-const db = require('../src/config/database');
+const app = require('./src/app.js');
+const db = require('./src/connection/database');
 
 db.sync({ force: true });
 app.listen(3000, () => {

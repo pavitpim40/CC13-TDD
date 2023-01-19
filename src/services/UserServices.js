@@ -15,7 +15,7 @@ const EmailService = require('./EmailService');
 const generateToken = (length) => {
   return crypto.randomBytes(length).toString('hex').substring(0, length);
 };
-const save = async (body) => {
+const createAccount = async (body) => {
   const { username, password, email } = body;
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = { username, password: hashedPassword, email, activationToken: generateToken(16) };
@@ -34,7 +34,7 @@ const findByEmail = async (email) => {
   return await User.findOne({ where: { email } });
 };
 
-const activate = async (token) => {
+const activateAccount = async (token) => {
   const user = await User.findOne({ where: { activationToken: token } });
   if (!user) {
     throw new InvalidTokenException();
@@ -43,4 +43,4 @@ const activate = async (token) => {
   user.activationToken = null;
   await user.save();
 };
-module.exports = { save, findByEmail, activate };
+module.exports = { createAccount, findByEmail, activateAccount };
