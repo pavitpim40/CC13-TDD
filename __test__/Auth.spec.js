@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const app = require('../src/app');
 const User = require('../src/user/User');
 const sequelize = require('../src/config/database');
+const en = require('../locales/en/translation.json');
+const th = require('../locales/th/translation.json');
 
 // ########################################
 // ############### GLOBAL #################
@@ -69,8 +71,8 @@ describe('Authentication', () => {
   //  Unhappy for USERNAME - i18next
   it.each`
     language | message
-    ${'th'}  | ${'ยืนยันตัวตนไม่สำเร็จ'}
-    ${'en'}  | ${'Invalid credential'}
+    ${'th'}  | ${th.authentication_failure}
+    ${'en'}  | ${en.authentication_failure}
   `('return $message when authentication fails and language is set as $language', async ({ language, message }) => {
     console.log(language);
     const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
@@ -105,8 +107,8 @@ describe('Authentication', () => {
 
   it.each`
     language | message
-    ${'th'}  | ${'บัญชีนี้ยังไม่ถูกเปิดใช้งาน'}
-    ${'en'}  | ${'Account is inactive'}
+    ${'th'}  | ${th.inactive_authentication_failure}
+    ${'en'}  | ${en.inactive_authentication_failure}
   `(
     'return $message when authentication fails for inactive account and language is set as $language',
     async ({ language, message }) => {
