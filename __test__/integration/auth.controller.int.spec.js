@@ -1,10 +1,10 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
-const app = require('../src/app');
-const { User } = require('../src/model');
-const sequelize = require('../src/connection/database');
-const en = require('../src/locales/en/translation.json');
-const th = require('../src/locales/th/translation.json');
+const app = require('../../src/app');
+const { User } = require('../../src/model');
+const sequelize = require('../../src/connection/database');
+const en = require('../../src/locales/en/translation.json');
+const th = require('../../src/locales/th/translation.json');
 
 // ########################################
 // ############### GLOBAL #################
@@ -35,7 +35,13 @@ const postAuthentication = async (credential, options = {}) => {
 // ########################################
 // ################ AUTH #################
 // ########################################
-describe('Authentication', () => {
+
+// ########################################
+// ################ LOGIN - HAPPY (EN/TH)
+// ########################################
+// COUNT : 3
+
+describe('LOGIN : HAPPY', () => {
   // HAPPY
   it('returns 200 when credentials are correct', async () => {
     await addUser();
@@ -53,29 +59,24 @@ describe('Authentication', () => {
     expect(Object.keys(response.body)).toEqual(['id', 'username', 'token']);
   });
 
+  // TOKEN
+  it('returns token in response body when credentials are correct', async () => {
+    await addUser();
+    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
+
+    expect(response.body.token).not.toBeUndefined();
+  });
+});
+
+// ########################################
+// ################ LOGIN - UNHAPPY
+// ########################################
+// COUNT : 7
+describe('LOGIN : UNHAPPY', () => {
   // Unhappy for USERNAME
   it('returns 401 when user does not exits', async () => {
     const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
     expect(response.status).toBe(401);
-  });
-
-  it('returns proper error body when authenticate fails', async () => {
-    const nowInMillis = new Date().getTime();
-    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
-    const error = response.body;
-    expect(error.path).toBe('/api/1.0/auth');
-    expect(error.timestamp).toBeGreaterThan(nowInMillis);
-    expect(Object.keys(error)).toEqual(['path', 'timestamp', 'message']);
-  });
-
-  //  Unhappy for USERNAME - i18next
-  it.each`
-    language | message
-    ${'th'}  | ${th.authentication_failure}
-    ${'en'}  | ${en.authentication_failure}
-  `('return $message when authentication fails and language is set as $language', async ({ language, message }) => {
-    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
-    expect(response.body.message).toBe(message);
   });
 
   // ### UNHAPPY - FOR PASSWORD
@@ -85,37 +86,6 @@ describe('Authentication', () => {
     const response = await postAuthentication({ email: 'user1@mail.com', password: 'WRONG-P4ssword' });
     expect(response.status).toBe(401);
   });
-
-  // ### UNHAPPY - FOR INACTIVE
-  it('return 403 when logging in with an inactive account', async () => {
-    await addUser({ ...activeUser, inactive: true });
-    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
-
-    expect(response.status).toBe(403);
-  });
-
-  it('returns proper error body when inactive fails', async () => {
-    addUser({ ...activeUser, inactive: true });
-    const nowInMillis = new Date().getTime();
-    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
-    const error = response.body;
-    expect(error.path).toBe('/api/1.0/auth');
-    expect(error.timestamp).toBeGreaterThan(nowInMillis);
-    expect(Object.keys(error)).toEqual(['path', 'timestamp', 'message']);
-  });
-
-  it.each`
-    language | message
-    ${'th'}  | ${th.inactive_authentication_failure}
-    ${'en'}  | ${en.inactive_authentication_failure}
-  `(
-    'return $message when authentication fails for inactive account and language is set as $language',
-    async ({ language, message }) => {
-      addUser({ ...activeUser, inactive: true });
-      const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
-      expect(response.body.message).toBe(message);
-    }
-  );
 
   // ### EMAIL INVALID FORMAT
   it('returns 401 when e-mail is not valid', async () => {
@@ -130,11 +100,60 @@ describe('Authentication', () => {
     expect(response.status).toBe(401);
   });
 
-  // TOKEN
-  it('returns token in response body when credentials are correct', async () => {
-    await addUser();
+  // ### UNHAPPY - FOR INACTIVE
+  it('return 403 when logging in with an inactive account', async () => {
+    await addUser({ ...activeUser, inactive: true });
     const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
 
-    expect(response.body.token).not.toBeUndefined();
+    expect(response.status).toBe(403);
   });
+
+  it('returns proper error body when authenticate fails', async () => {
+    const nowInMillis = new Date().getTime();
+    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
+    const error = response.body;
+    expect(error.path).toBe('/api/1.0/auth');
+    expect(error.timestamp).toBeGreaterThan(nowInMillis);
+    expect(Object.keys(error)).toEqual(['path', 'timestamp', 'message']);
+  });
+
+  it('returns proper error body when inactive fails', async () => {
+    addUser({ ...activeUser, inactive: true });
+    const nowInMillis = new Date().getTime();
+    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' });
+    const error = response.body;
+    expect(error.path).toBe('/api/1.0/auth');
+    expect(error.timestamp).toBeGreaterThan(nowInMillis);
+    expect(Object.keys(error)).toEqual(['path', 'timestamp', 'message']);
+  });
+});
+
+// ########################################
+// ################ LOGIN - i18n
+// ########################################
+// COUNT : 4
+
+describe('LOGIN : i18n', () => {
+  //  Unhappy for USERNAME - i18next
+  it.each`
+    language | message
+    ${'th'}  | ${th.authentication_failure}
+    ${'en'}  | ${en.authentication_failure}
+  `('return $message when authentication fails and language is set as $language', async ({ language, message }) => {
+    const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
+    expect(response.body.message).toBe(message);
+  });
+
+  it.each`
+    language | message
+    ${'th'}  | ${th.inactive_authentication_failure}
+    ${'en'}  | ${en.inactive_authentication_failure}
+  `(
+    'return $message when authentication fails for inactive account and language is set as $language',
+    async ({ language, message }) => {
+      addUser({ ...activeUser, inactive: true });
+      const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
+      expect(response.body.message).toBe(message);
+    }
+  );
 });

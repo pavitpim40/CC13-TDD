@@ -1,9 +1,9 @@
 const request = require('supertest');
-const app = require('../src/app');
-const { User } = require('../src/model');
-const db = require('../src/connection/database');
-const en = require('../src/locales/en/translation.json');
-const th = require('../src/locales/th/translation.json');
+const app = require('../../src/app');
+const { User } = require('../../src/model');
+const db = require('../../src/connection/database');
+const en = require('../../src/locales/en/translation.json');
+const th = require('../../src/locales/th/translation.json');
 
 const SMTPServer = require('smtp-server').SMTPServer;
 
@@ -44,7 +44,6 @@ beforeEach(async () => {
 
 afterEach(() => {
   // restore the spy created with spyOn
-
   jest.restoreAllMocks();
 });
 
@@ -63,12 +62,16 @@ const postUser = (user, options = {}) => {
   }
   return agent.send(user);
 };
-describe('User Registration', () => {
+
+// ###############################
+// ########## USER REGISTER : HAPPY
+// ###############################
+// COUNT : 5
+describe('REGISTER : HAPPY : EN', () => {
   it('returns 200 OK when signup request is valid', async () => {
     const response = await postUser(validUser);
     expect(response.status).toBe(200);
   });
-
   it('returns success message when signup request is valid', async () => {
     const response = await postUser(validUser);
     expect(response.body.message).toBe(en.user_create_success);
@@ -97,7 +100,21 @@ describe('User Registration', () => {
     const savedUser = userList[0];
     expect(savedUser.password).not.toBe('P4ssword');
   });
+});
 
+// COUNT : 1
+describe('REGISTER : HAPPY : TH', () => {
+  it(`returns ${th.user_create_success} when signup request is valid`, async () => {
+    const response = await postUser(validUser, { language: 'th' });
+    expect(response.body.message).toBe(th.user_create_success);
+  });
+});
+// ###############################
+// ############# VALIDATION - ZONE
+// ###############################
+
+// COUNT 6 + 14
+describe('REGISTER-VALIDATION : UNHAPPY : EN', () => {
   it('returns 400 when username is null', async () => {
     const response = await postUser({
       username: null,
@@ -231,17 +248,65 @@ describe('User Registration', () => {
     expect(Object.keys(body.validationErrors)).toEqual(['username', 'email']);
   });
 
+  it('returns validation Failure message in error response body when validation fails', async () => {
+    const response = await postUser({ ...validUser, username: null });
+
+    expect(response.body.message).toBe('Validation Failure');
+  });
+});
+
+// Count 2 + 14
+describe('REGISTER-VALIDATION : UNHAPPY : TH', () => {
+  it.each`
+    field         | value              | expectedMessage
+    ${'username'} | ${null}            | ${th.username_null}
+    ${'username'} | ${'usr'}           | ${th.username_size}
+    ${'username'} | ${'a'.repeat(33)}  | ${th.username_size}
+    ${'email'}    | ${null}            | ${th.email_null}
+    ${'email'}    | ${'mail.com'}      | ${th.email_invalid}
+    ${'email'}    | ${'user@mail'}     | ${th.email_invalid}
+    ${'password'} | ${null}            | ${th.password_null}
+    ${'password'} | ${'P4ss'}          | ${th.password_size}
+    ${'password'} | ${'alllowercase'}  | ${th.password_invalid}
+    ${'password'} | ${'ALLUPPERCASE'}  | ${th.password_invalid}
+    ${'password'} | ${'12345678'}      | ${th.password_invalid}
+    ${'password'} | ${'lowerANDupper'} | ${th.password_invalid}
+    ${'password'} | ${'lowerand12341'} | ${th.password_invalid}
+    ${'password'} | ${'UPPERAND12341'} | ${th.password_invalid}
+  `('returns $expectedMessage when $field is null', async ({ field, value, expectedMessage }) => {
+    const user = {
+      username: 'user1',
+      email: null,
+      password: 'P4ssword',
+    };
+    user[field] = value;
+    const response = await postUser(user, { language: 'th' });
+    expect(response.body.validationErrors[field]).toBe(expectedMessage);
+  });
+
+  it(`returns ${th.email_inuse} when same email is already in use`, async () => {
+    await User.create(validUser);
+    const response = await postUser(validUser, { language: 'th' });
+    // console.log(response.body);
+    expect(response.body.validationErrors.email).toBe(th.email_inuse);
+  });
+
+  it(`returns ${th.validation_failure} message in error response body when validation fails`, async () => {
+    const response = await postUser({ ...validUser, username: null }, { language: 'th' });
+
+    expect(response.body.message).toBe(th.validation_failure);
+  });
+});
+
+// ###############################
+// ############# INACTIVE MODE - ZONE
+// ###############################
+// Count : 2
+describe('REGISTER-INACTIVE MODE & ACTIVATION TOKEN : HAPPY', () => {
   it('create user in inactive mode even the request body contains inactive as false', async () => {
     // Arrange
     const newUser = { ...validUser, inactive: false };
     await postUser({ ...newUser });
-    const users = await User.findAll();
-    const savedUser = users[0];
-    expect(savedUser.inactive).toBe(true);
-  });
-
-  it('creates user in inactive mode even the request body contains inactive as false', async () => {
-    await postUser({ ...validUser, inactive: false });
     const users = await User.findAll();
     const savedUser = users[0];
     expect(savedUser.inactive).toBe(true);
@@ -254,7 +319,13 @@ describe('User Registration', () => {
     // expect(savedUser.activationToken).not.toBeUndefined();
     expect(savedUser.activationToken).toBeTruthy();
   });
+});
 
+// ###############################
+// ############# EMAIL - ZONE
+// ###############################
+// Count 5
+describe('Sending Activation - Email : HAPPY & UNHAPPY : EN/TH ', () => {
   it('sends an Account activation email with activationToken', async () => {
     await postUser({ ...validUser });
     // const lastMail = nodemailerStub.interactsWithMail.lastMail();
@@ -326,53 +397,6 @@ describe('User Registration', () => {
     // mockSendAccountActivation.mockRestore();
   });
 
-  it('returns validation Failure message in error response body when validation fails', async () => {
-    const response = await postUser({ ...validUser, username: null });
-
-    expect(response.body.message).toBe('Validation Failure');
-  });
-});
-
-describe('Internationalization', () => {
-  it.each`
-    field         | value              | expectedMessage
-    ${'username'} | ${null}            | ${th.username_null}
-    ${'username'} | ${'usr'}           | ${th.username_size}
-    ${'username'} | ${'a'.repeat(33)}  | ${th.username_size}
-    ${'email'}    | ${null}            | ${th.email_null}
-    ${'email'}    | ${'mail.com'}      | ${th.email_invalid}
-    ${'email'}    | ${'user@mail'}     | ${th.email_invalid}
-    ${'password'} | ${null}            | ${th.password_null}
-    ${'password'} | ${'P4ss'}          | ${th.password_size}
-    ${'password'} | ${'alllowercase'}  | ${th.password_invalid}
-    ${'password'} | ${'ALLUPPERCASE'}  | ${th.password_invalid}
-    ${'password'} | ${'12345678'}      | ${th.password_invalid}
-    ${'password'} | ${'lowerANDupper'} | ${th.password_invalid}
-    ${'password'} | ${'lowerand12341'} | ${th.password_invalid}
-    ${'password'} | ${'UPPERAND12341'} | ${th.password_invalid}
-  `('returns $expectedMessage when $field is null', async ({ field, value, expectedMessage }) => {
-    const user = {
-      username: 'user1',
-      email: null,
-      password: 'P4ssword',
-    };
-    user[field] = value;
-    const response = await postUser(user, { language: 'th' });
-    expect(response.body.validationErrors[field]).toBe(expectedMessage);
-  });
-
-  it(`returns ${th.email_inuse} when same email is already in use`, async () => {
-    await User.create(validUser);
-    const response = await postUser(validUser, { language: 'th' });
-    // console.log(response.body);
-    expect(response.body.validationErrors.email).toBe(th.email_inuse);
-  });
-
-  it(`returns ${th.user_create_success} when signup request is valid`, async () => {
-    const response = await postUser(validUser, { language: 'th' });
-    expect(response.body.message).toBe(th.user_create_success);
-  });
-
   // Email i18
   it(`returns ${th.email_failure} message when sending email fails`, async () => {
     simulateSmtpFailure = true;
@@ -391,15 +415,13 @@ describe('Internationalization', () => {
     // Tear Down
     // mockSendAccountActivation.mockRestore();
   });
-
-  it(`returns ${th.validation_failure} message in error response body when validation fails`, async () => {
-    const response = await postUser({ ...validUser, username: null }, { language: 'th' });
-
-    expect(response.body.message).toBe(th.validation_failure);
-  });
 });
 
-describe('Account activation', () => {
+// ###############################
+// ############# ACTIVATE - ZONE
+// ###############################
+// Count : 4 + 4
+describe('ACCOUNT ACTIVATION : HAPPY and UNHAPPY : EN/TH', () => {
   it('activates the account when correct token is sent', async () => {
     await postUser({ ...validUser });
     let users = await User.findAll();
@@ -487,8 +509,11 @@ describe('Account activation', () => {
   );
 });
 
-// ####################### 4
-describe('Error Model', () => {
+// ###############################
+// ############# ERROR MODEL - ZONE
+// ###############################
+// Count : 4
+describe('Error Model : EN/TH', () => {
   it('returns path, timestamp, message and validationErrors in response when validation failure', async () => {
     const response = await postUser({ ...validUser, username: null });
     const body = response.body;
