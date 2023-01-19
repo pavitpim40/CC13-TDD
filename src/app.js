@@ -1,7 +1,9 @@
+/* eslint-disable no-unused-vars */
 const express = require('express');
 const i18next = require('i18next');
 const Backend = require('i18next-fs-backend');
 const middleware = require('i18next-http-middleware');
+const ErrorHandler = require('./error/ErrorHandler');
 
 i18next
   .use(Backend)
@@ -31,5 +33,7 @@ db.authenticate()
   .catch((err) => console.log(err));
 
 app.use('/', userRoute);
+
+app.use(ErrorHandler);
 
 module.exports = app;

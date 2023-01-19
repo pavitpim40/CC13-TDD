@@ -3,6 +3,7 @@ const { check, validationResult } = require('express-validator');
 // const User = require('./User');
 const UserService = require('./UserServices');
 const router = express.Router();
+const ValidationException = require('../error/ValidationException');
 
 // const validateUsername = (req, res, next) => {
 //   // console.log(username, password, email);
@@ -52,36 +53,39 @@ router.post(
     .bail()
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/)
     .withMessage('password_invalid'),
-  async (req, res) => {
+  async (req, res, next) => {
     // if (Object.keys(req.validationErrors).length > 0) {
     //   return res.status(400).send({ validationErrors: req.validationErrors });
     // }
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      const validationErrors = {};
-      errors.array().forEach((error) => {
-        validationErrors[error.param] = req.t(error.msg);
-      });
-      return res.status(400).send({ validationErrors });
+      // const validationErrors = {};
+      // errors.array().forEach((error) => {
+      //   validationErrors[error.param] = req.t(error.msg);
+      // });
+      // return res.status(400).send({ validationErrors });
+      return next(new ValidationException(errors));
     }
     try {
       await UserService.save(req.body);
       return res.status(200).send({ message: req.t('user_create_success') });
     } catch (error) {
-      return res.status(502).send({ message: req.t(error.message) });
+      // return res.status(502).send({ message: req.t(error.message) });
+      next(error);
       // return res.status(500);
     }
   }
 );
 
-router.post('/api/1.0/users/token/:activationToken', async (req, res) => {
+router.post('/api/1.0/users/token/:activationToken', async (req, res, next) => {
   const { activationToken } = req.params;
   try {
     await UserService.activate(activationToken);
     res.send({ message: req.t('account_activation_success') });
     res.send();
   } catch (error) {
-    res.status(400).send({ message: req.t(error.message) });
+    // res.status(400).send({ message: req.t(error.message) });
+    next(error);
   }
 });
 
