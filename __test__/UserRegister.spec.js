@@ -1,12 +1,10 @@
 const request = require('supertest');
 const app = require('../src/app');
-const User = require('../src/user/User');
-const db = require('../src/config/database');
-const en = require('../locales/en/translation.json');
-const th = require('../locales/th/translation.json');
+const User = require('../src/model/User');
+const db = require('../src/connection/database');
+const en = require('../src/locales/en/translation.json');
+const th = require('../src/locales/th/translation.json');
 
-// const nodemailerStub = require('nodemailer-stub');
-// const EmailService = require('../src/email/EmailService');
 const SMTPServer = require('smtp-server').SMTPServer;
 
 let lastMail, server;
@@ -25,11 +23,11 @@ beforeAll(async () => {
       });
       stream.on('end', () => {
         if (simulateSmtpFailure) {
-          const err = new Error('Invalid mailboxx');
+          const err = new Error('Invalid mailbox');
           err.responseCode = 553;
           return callback(err);
         }
-        // console.log('TOF', typeof mailBody);
+
         lastMail = mailBody;
         callback();
       });

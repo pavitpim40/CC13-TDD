@@ -1,11 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
-const UserService = require('../user/UserServices');
-const AuthenticationException = require('./AuthenticationException');
-const ForbiddenException = require('./ForbiddenException');
+const UserService = require('../services/UserServices');
+const AuthenticationException = require('../errors/authError/AuthenticationException');
+const ForbiddenException = require('../errors/authError/ForbiddenException');
 const { check, validationResult } = require('express-validator');
-const TokenService = require('./TokenService');
+const TokenService = require('../services/TokenService');
 
 router.post('/', check('email').isEmail(), async (req, res, next) => {
   const errors = validationResult(req);

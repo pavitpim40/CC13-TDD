@@ -1,10 +1,10 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 const app = require('../src/app');
-const User = require('../src/user/User');
-const sequelize = require('../src/config/database');
-const en = require('../locales/en/translation.json');
-const th = require('../locales/th/translation.json');
+const User = require('../src/model/User');
+const sequelize = require('../src/connection/database');
+const en = require('../src/locales/en/translation.json');
+const th = require('../src/locales/th/translation.json');
 
 // ########################################
 // ############### GLOBAL #################

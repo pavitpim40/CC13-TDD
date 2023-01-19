@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 module.exports = (err, req, res, next) => {
   const { status, message, errors } = err;
-  console.log('ms', message);
   let validationErrors;
   if (errors) {
     validationErrors = {};

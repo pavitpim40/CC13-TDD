@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const transporter = require('../config/emailTransporter');
+const transporter = require('../connection/emailTransporter');
 
 const sendAccountActivation = async (email, token) => {
   // transporter.verify(function (error) {

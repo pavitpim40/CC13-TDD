@@ -1,41 +1,25 @@
 /* eslint-disable no-unused-vars */
+require('dotenv').config();
 const express = require('express');
-const i18next = require('i18next');
-const Backend = require('i18next-fs-backend');
-const middleware = require('i18next-http-middleware');
-const ErrorHandler = require('./error/ErrorHandler');
 
-i18next
-  .use(Backend)
-  .use(middleware.LanguageDetector)
-  .init({
-    fallbackLng: 'en',
-    lng: 'en',
-    ns: ['translation'],
-    defaultNS: 'translation',
-    backend: {
-      loadPath: './locales/{{lng}}/{{ns}}.json',
-    },
-    detection: {
-      lookupHeader: 'accept-language',
-    },
-  });
-const userRoute = require('./user/UserRoute');
-const AuthenticateRoute = require('./auth/AuthenticationRouter');
-const db = require('./config/database');
+const db = require('./connection/database');
+const ErrorMiddleware = require('./middlewares/ErrorHandler');
+const i18nMiddleware = require('./middlewares/i18nMiddleware');
+const userRoute = require('./routes/userRoute');
+const authRoute = require('./routes/authRouter');
+
 const app = express();
-
-app.use(middleware.handle(i18next));
-app.use(express.json());
 
 // db.sync({ force: true });
 db.authenticate()
   .then(() => console.log('DB connect'))
   .catch((err) => console.log(err));
 
+app.use(express.json());
+app.use(i18nMiddleware);
 app.use('/api/1.0/users', userRoute);
-app.use('/api/1.0/auth', AuthenticateRoute);
+app.use('/api/1.0/auth', authRoute);
 
-app.use(ErrorHandler);
+app.use(ErrorMiddleware);
 
 module.exports = app;

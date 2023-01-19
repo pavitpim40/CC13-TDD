@@ -1,14 +1,18 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const User = require('./User');
-const EmailService = require('../email/EmailService');
-const EmailException = require('../email/EmailException');
-const InvalidTokenException = require('../user/InvalidTokenException');
-const sequelize = require('../config/database');
+
+// Repo
+const sequelize = require('../connection/database');
+const User = require('../model/User');
+
+// Exception
+const EmailException = require('../errors/emailError/EmailException');
+const InvalidTokenException = require('../errors/tokenError/InvalidTokenException');
+
+// Other Service
+const EmailService = require('./EmailService');
 
 const generateToken = (length) => {
-  // console.log(crypto.randomBytes(length).toString('hex'));
-  // console.log(crypto.randomBytes(length).toString('hex').substring(0, length));
   return crypto.randomBytes(length).toString('hex').substring(0, length);
 };
 const save = async (body) => {
@@ -17,14 +21,11 @@ const save = async (body) => {
   const user = { username, password: hashedPassword, email, activationToken: generateToken(16) };
   const transaction = await sequelize.transaction();
   await User.create(user, { transaction });
-  // console.log('$$', user.activationToken);
 
   try {
     await EmailService.sendAccountActivation(email, user.activationToken);
-    // console.log('AFTER SEND MAIL');
     await transaction.commit();
   } catch (error) {
-    // console.log('error-send email', error);
     await transaction.rollback();
     throw new EmailException();
   }
