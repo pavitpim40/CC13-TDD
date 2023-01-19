@@ -10,7 +10,7 @@ const authRoute = require('./routes/authRouter');
 
 const app = express();
 
-// db.sync({ force: true });
+db.sync({ force: true });
 db.authenticate()
   .then(() => console.log('DB connect'))
   .catch((err) => console.log(err));

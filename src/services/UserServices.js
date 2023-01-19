@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 // Repo
 const sequelize = require('../connection/database');
-const User = require('../model/User');
+const { User } = require('../model');
 
 // Exception
 const EmailException = require('../errors/emailError/EmailException');

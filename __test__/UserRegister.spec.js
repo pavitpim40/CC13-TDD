@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const User = require('../src/model/User');
+const { User } = require('../src/model');
 const db = require('../src/connection/database');
 const en = require('../src/locales/en/translation.json');
 const th = require('../src/locales/th/translation.json');
