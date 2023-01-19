@@ -18,7 +18,24 @@ exports.updateTodo = async (req, res, next) => {
     if (!updateTodo) {
       return res.status(404).json({ message: 'todo not found' });
     }
-    res.status(200).json(updateTodo);
+
+    res.status(200).json({ message: 'updated todo' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getTodoById = async (req, res, next) => {
+  try {
+    const todoId = req.params.todoId;
+
+    const todo = await Todo.findByPk(todoId);
+    if (!todo) {
+      return res.status(404).json({ message: 'cannot find todo' });
+    }
+    console.log('G');
+    console.log(todo);
+    return res.status(200).json(todo);
   } catch (error) {
     next(error);
   }
