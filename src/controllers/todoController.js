@@ -33,8 +33,7 @@ exports.getTodoById = async (req, res, next) => {
     if (!todo) {
       return res.status(404).json({ message: 'cannot find todo' });
     }
-    console.log('G');
-    console.log(todo);
+
     return res.status(200).json(todo);
   } catch (error) {
     next(error);
