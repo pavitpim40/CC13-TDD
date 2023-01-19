@@ -74,7 +74,6 @@ describe('Authentication', () => {
     ${'th'}  | ${th.authentication_failure}
     ${'en'}  | ${en.authentication_failure}
   `('return $message when authentication fails and language is set as $language', async ({ language, message }) => {
-    console.log(language);
     const response = await postAuthentication({ email: 'user1@mail.com', password: 'P4ssword' }, { language });
     expect(response.body.message).toBe(message);
   });
