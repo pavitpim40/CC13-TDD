@@ -39,3 +39,12 @@ exports.getTodoById = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getTodos = async (req, res, next) => {
+  try {
+    const todos = await Todo.findAll();
+    res.status(200).json(todos);
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../../src/app');
 const newTodo = require('../mocks/newTodo.json');
+const allTodos = require('../mocks/allTodos.json');
 const { Todo } = require('../../src/model');
 const db = require('../../src/connection/database');
 
@@ -50,5 +51,15 @@ describe(endpointUrl, () => {
   test("Get todo by id doesn't exist" + endpointUrl + ':todoId', async () => {
     const response = await request(app).get(endpointUrl + 'randomId');
     expect(response.statusCode).toBe(404);
+  });
+
+  test('Get All Todo', async () => {
+    await Todo.bulkCreate(allTodos);
+    const response = await request(app).get(endpointUrl);
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.body)).toBeTruthy();
+    expect(response.body[0].title).toBeDefined();
+    expect(response.body[0].done).toBeDefined();
+    firstTodo = response.body[0];
   });
 });
